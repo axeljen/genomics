@@ -9,7 +9,7 @@ All the scripts run in python3, and require the dependencies listed in requireme
 	
 	cd genomics
 
-	pip install -r requirements.txt
+	python3 -m pip install -r requirements.txt
 
 
 Then the scripts can be run directly out of this directory.
