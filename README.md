@@ -53,3 +53,23 @@ Convert variants in a vcf file to a multi sequence alignment file in fasta or ph
 * Alternatively, you can choose to output two "haplotypes" per sample by specifying `--diploidize`. This option does not take phasing info into account at all but currently just puts the reference allele in one haplotype and the alternate in another (in the case of bi-allelic snps, otherwise it'll just take the first and second allele). So it's not very useful right now.
 
 ### Note: Use the fasta output format for now as the phylip is buggy. Will correct this soon..
+
+
+## findFixedDifference.py
+
+This script will search through an alignment and identify sites that are fixed for different alleles between specified groups.
+
+	usage: findFixedDifferences.py [-h] -i INPUT_FASTA -o OUTPUT_TABLE -p POPFILE
+
+	optional arguments:
+	-h, --help            show this help message and exit
+	-i INPUT_FASTA, --input-fasta INPUT_FASTA
+							Input alignment in fasta format.
+	-o OUTPUT_TABLE, --output-table OUTPUT_TABLE
+							Output table in tsv format.
+	-p POPFILE, --popfile POPFILE
+							File with two tab separated columns, sample in the first and clade/population in
+							second. It's ok to have samples without assignment.
+
+Takes a fasta sequence and a table specifying the populations/groups as input. The popfile should have one row per sample with two tab-separated columns: column 1 is sample name, and column 2 is population/group. It's ok to have samples unassigned. Output is a tab-separated table with one row for each position with a fixed difference, giving the alleles that each of the populations carry.
+
