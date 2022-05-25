@@ -91,10 +91,6 @@ if reference:
 	seqDict = {}
 	refname = list(refseq.keys())[0]
 	seqDict[refname] = refseq[refname]
-	#print(region)
-	#print(len(seqDict[refname]))
-	#print(seqDict[refname][25497])
-	#sys.exit()
 	for sample in samples:
 		if fill == "reference":
 			if diploidize:
@@ -143,8 +139,6 @@ with pysam.VariantFile(input_vcf) as vcf:
 				seqDict[refname][seqDictPos] = refallele
 				for sample in siteSeqDict.keys():
 					seqDict[sample][seqDictPos] = siteSeqDict[sample] + "-" * (allele_length - len(siteSeqDict[sample]))
-				print(siteSeqDict)
-				print(rec.alleles)
 			else: #if everything is of length 1 just replace the correct position with the new base
 				for sample in siteSeqDict.keys():
 					seqDict[sample][seqDictPos] = siteSeqDict[sample]
@@ -156,9 +150,7 @@ with pysam.VariantFile(input_vcf) as vcf:
 			seqDictPos = len(seqDict['reference']) -1
 		applied_variants += 1
 		processed_positions = seqDictPos
-		#print(seqDictPos)
-		#print(seqDict[refname][seqDictPos])
-
+		
 # convert the sequences to strings
 for key,value in seqDict.items():
 	seqDict[key] = ''.join(value)
