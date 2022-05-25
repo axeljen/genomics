@@ -91,6 +91,10 @@ if reference:
 	seqDict = {}
 	refname = list(refseq.keys())[0]
 	seqDict[refname] = refseq[refname]
+	#print(region)
+	#print(len(seqDict[refname]))
+	#print(seqDict[refname][25497])
+	#sys.exit()
 	for sample in samples:
 		if fill == "reference":
 			if diploidize:
@@ -120,6 +124,7 @@ applied_variants = 0
 
 with pysam.VariantFile(input_vcf) as vcf:
 	for rec in vcf.fetch(region[0],region[1],region[2]):
+		#print(offset)
 		# first get all the alleles
 		bases = v.get_bases(rec, samples, set_filtered_to=set_filtered_to, ignore_filters=ignore_filters)
 		# and turn those in to a single-locus seqDict
@@ -132,12 +137,14 @@ with pysam.VariantFile(input_vcf) as vcf:
 			pos = rec.pos
 			allele_length = max(len(a) for a in siteSeqDict.values())
 			offset = offset + allele_length - 1
-			seqDictPos = pos - start - 1 + offset
+			seqDictPos = pos - start - 1 #+ offset
 			if allele_length > 1: # if there's an insertion we need to adjust the reference sequence with gaps
 				refallele = seqDict[refname][seqDictPos] + "-" * (allele_length - len(seqDict[refname][seqDictPos]))
 				seqDict[refname][seqDictPos] = refallele
 				for sample in siteSeqDict.keys():
 					seqDict[sample][seqDictPos] = siteSeqDict[sample] + "-" * (allele_length - len(siteSeqDict[sample]))
+				print(siteSeqDict)
+				print(rec.alleles)
 			else: #if everything is of length 1 just replace the correct position with the new base
 				for sample in siteSeqDict.keys():
 					seqDict[sample][seqDictPos] = siteSeqDict[sample]
@@ -146,9 +153,11 @@ with pysam.VariantFile(input_vcf) as vcf:
 			seqDict['reference'].append(rec.alleles[0])
 			for sample in samples:
 				seqDict[sample].append(siteSeqDict[sample])
-			seqDictPos = len(seqDict['reference'])
+			seqDictPos = len(seqDict['reference']) -1
 		applied_variants += 1
 		processed_positions = seqDictPos
+		#print(seqDictPos)
+		#print(seqDict[refname][seqDictPos])
 
 # convert the sequences to strings
 for key,value in seqDict.items():
@@ -168,3 +177,4 @@ elif fasta:
 
 # write summary and exit
 sys.stderr.write("Finished. Applied {variants} over a total of {seqlen} bases.\n".format(variants = applied_variants, seqlen = processed_positions))
+
