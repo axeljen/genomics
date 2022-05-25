@@ -134,7 +134,7 @@ with pysam.VariantFile(input_vcf) as vcf:
 			offset = offset + allele_length - 1
 			seqDictPos = pos - start - 1 + offset
 			if allele_length > 1: # if there's an insertion we need to adjust the reference sequence with gaps
-				refallele = seqDict[refname][seqDictPos] + "-" * allele_length - len(seqDict[refname][seqDictPos])
+				refallele = seqDict[refname][seqDictPos] + "-" * (allele_length - len(seqDict[refname][seqDictPos]))
 				seqDict[refname][seqDictPos] = refallele
 				for sample in siteSeqDict.keys():
 					seqDict[sample][seqDictPos] = siteSeqDict[sample] + "-" * (allele_length - len(siteSeqDict[sample]))
