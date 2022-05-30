@@ -6,7 +6,7 @@ def parsePopfile(popfile):
 			sample = line.split("\t")[0]
 			try:
 				clade = line.split("\t")[1].rstrip()
-				if not clade in list(clades.keys()):
+				if not clade in list(clades.keys()) and not clade == "":
 					clades[clade] = [sample]
 				else:
 					clades[clade].append(sample)

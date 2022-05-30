@@ -73,3 +73,20 @@ This script will search through an alignment and identify sites that are fixed f
 
 Takes a fasta sequence and a table specifying the populations/groups as input. The popfile should have one row per sample with two tab-separated columns: column 1 is sample name, and column 2 is population/group. It's ok to have samples unassigned. Output is a tab-separated table with one row for each position with a fixed difference, giving the alleles that each of the populations carry.
 
+## checkDiagnosticSites.py
+
+This tool does a follow up analysis on the findFixedDifferences.py script by checking the site patterns in all samples in an alignment.
+
+	usage: checkDiagnosticSites.py [-h] -i INPUT_FASTA [-d DIAGNOSTIC_SITES] -o OUTPUT_PREFIX
+
+	Uses the output from findFixedDifferences.py to count the site patterns for individual samples in an alignment.
+
+	optional arguments:
+	-h, --help            show this help message and exit
+	-i INPUT_FASTA, --input-fasta INPUT_FASTA
+						Input alignment in fasta format.
+	-d DIAGNOSTIC_SITES, --diagnostic-sites DIAGNOSTIC_SITES
+						Table with diagnostic sites, as output from findFixedDifferences.py.
+	-o OUTPUT_PREFIX, --output-prefix OUTPUT_PREFIX
+						Prefix for the two output files: prefix_nucleotides.tsv and prefix_counts.tsv
+
