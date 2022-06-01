@@ -19,7 +19,6 @@ def attachSampleAlleles(diagnostic_dict, seqDict):
 		for pos in diagnostic_dict.keys():
 			base = seqDict[sample][int(pos) - 1]
 			for pop in counts[sample].keys():
-				#print(pop)
 				if base == diagnostic_dict[pos][pop]:
 					counts[sample][pop] += 1
 			diagnostic_dict[pos][sample] = base
@@ -45,15 +44,13 @@ seqDict = seqtools.FastaFetch(input_fasta)
 
 # read and parse diagnostic sites
 diagnostic_sites=parseSites(args.diagnostic_sites)
-print(diagnostic_sites)
+
 # copy this to attach all the samples
 diagnostic_copy = {k: v for k,v in diagnostic_sites.items()}
-print(diagnostic_copy)
-#print(diagnostic_sites)
+
 # count sites for all sasmples
 result_dict,counts = attachSampleAlleles(diagnostic_copy, seqDict)
-print(diagnostic_sites)
-#print(diagnostic_sites)
+
 # write the results dict
 with open(args.output_prefix + "_nucleotides.tsv", "w") as of:
 	samples = [s for s in result_dict[list(result_dict.keys())[0]]]
