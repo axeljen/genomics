@@ -28,12 +28,12 @@ def get_bases(rec, samples=None, set_filtered_to="N", ignore_filters=False):
 	alleles = {i: allele for i,allele in enumerate(rec.alleles)}
 	longest_allele = 1
 	for a in alleles:
-		if len(alleles[a]) > longest_allele:
-			longest_allele = len(alleles[a])
-	for a in alleles:
 		#in a nonvariant record, a lingering <NON_REF> might turn up at few places. These are low confident non-ref and should be removed, will set this to "N"
 		if alleles[a] == "<NON_REF>":
 			alleles[a] = "N"
+	for a in alleles:
+		if len(alleles[a]) > longest_allele:
+			longest_allele = len(alleles[a])
 		if len(alleles[a]) < longest_allele:
 			alleles[a] = alleles[a] + "-" * (longest_allele - len(alleles[a]))
 		if alleles[a] == "*" or alleles[a] == None:

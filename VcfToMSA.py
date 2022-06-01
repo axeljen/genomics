@@ -147,7 +147,7 @@ with pysam.VariantFile(input_vcf) as vcf:
 			seqDict['reference'].append(rec.alleles[0])
 			for sample in samples:
 				seqDict[sample].append(siteSeqDict[sample])
-			seqDictPos = len(seqDict['reference']) -1
+			seqDictPos = len(seqDict['reference'])
 		applied_variants += 1
 		processed_positions = seqDictPos
 		
@@ -168,5 +168,5 @@ elif fasta:
 	seqtools.WriteSeqDictToFasta(seqDict, outfile)
 
 # write summary and exit
-sys.stderr.write("Finished. Applied {variants} over a total of {seqlen} bases.\n".format(variants = applied_variants, seqlen = processed_positions))
+sys.stderr.write("Finished. Applied {variants} variants over a total of {seqlen} bases.\n".format(variants = applied_variants, seqlen = processed_positions))
 
