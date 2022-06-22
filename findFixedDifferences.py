@@ -43,12 +43,14 @@ def DifferentiallyFixed(pops, seqDict):
 
 	
 import seqtools.functions as seqtools
-import argparse
+import argparse, re, pysam
+from vcf.functions import get_bases, Haploidize
 
 parser = argparse.ArgumentParser()
 
 #arguments for in and output:
-parser.add_argument("-i", "--input-fasta", help="Input alignment in fasta format.", required=True)
+parser.add_argument("-i", "--input", help="Input file, either as alignment in fasta format or as a vcf file.", required=True)
+parser.add_argument("-r", "--region", help="Region to analyze as chrom:start-end, compatible only with vcf input.")
 parser.add_argument("-o", "--output-table", help="Output table in tsv format.", required=True)
 
 parser.add_argument("-p", "--popfile", help="File with two tab separated columns, sample in the first and clade/population in second. It's ok to have samples without assignment.", required=True)
@@ -58,29 +60,60 @@ args = parser.parse_args()
 
 #fasta = "/Users/axeljensen/Dropbox/FRANKIES_PROJECT/TFB2M.fa"
 
-# read in fasta
-seqDict = seqtools.FastaFetch(args.input_fasta)
-
 # read popfile and parse it
 popfile=args.popfile
 pops = parsePopfile(popfile)
 
-# check length of alignment
-seqlen = len(seqDict[list(seqDict.keys())[0]])
-
 # loop through each position to look for fixed differences
 fixed_diffs = {}
 diffs_found = 0
-for base in range(0,seqlen):
-	posDict = {sample: seqDict[sample][base] for sample in seqDict.keys()}
-	diff = DifferentiallyFixed(pops, posDict)
-	if diff:
-		fixed_diffs[base + 1] = diff
-		diffs_found +=1
-with open(args.output_table, 'w') as of:
-	of.write('\t'.join(['pos'] + [pop for pop in pops.keys()]) + "\n")
-	for pos in fixed_diffs.keys():
-		of.write('\t'.join([str(pos)] + [fixed_diffs[pos][pop][0] for pop in pops.keys()]) + "\n")
-	of.close()
 
-print("Wrote {count} fixed differences to {file}".format(count=diffs_found, file=args.output_table))
+# try to parse the input file format, if failing we will exit 
+input_read = False
+
+# if a fasta input is given, take this path
+if re.match("^.*(.fa|.fa.gz|.fasta|.fasta.gz)$", args.input):
+	input_read = True
+	seqDict = seqtools.FastaFetch(args.input_fasta)
+	# check length of alignment
+	seqlen = len(seqDict[list(seqDict.keys())[0]])
+	for base in range(0,seqlen):
+		posDict = {sample: seqDict[sample][base] for sample in seqDict.keys()}
+		diff = DifferentiallyFixed(pops, posDict)
+		if diff:
+			fixed_diffs[base + 1] = diff
+			diffs_found +=1
+
+# otherwise, chech that it's a vcf and continue this path instead
+if re.match("^.*(.vcf|.vcf.gz)$", args.input):
+	input_read = True
+	samples = []
+	for pop,sample_list in pops.items():
+		samples = samples + sample_list
+	vcf = pysam.VariantFile(args.input)
+	if args.region:
+		chrom,interval = args.region.split(":")[0],args.region.split(":")[1]
+		start,end = int(interval.split("-")[0]),int(interval.split("-")[1])
+	else:
+		chrom,start,end = None,None,None
+	for rec in vcf.fetch(chrom,start,end):
+		sample_alleles = get_bases(rec,samples)
+		posDict = Haploidize(sample_alleles, use_ambiguities=True)
+		diff = DifferentiallyFixed(pops,posDict)
+		if diff:
+			fixed_diffs[rec.pos] = diff
+			diffs_found += 1
+
+# exit if input wasn't recognized
+if not input_read:
+	print("Could not recognize format of input file, must be a fasta (.fa,.fasta,.fa.gz,.fasta.gz) or a vcf (.vcf,.vcf.gz).")	
+
+if diffs_found > 0:
+	with open(args.output_table, 'w') as of:
+		of.write('\t'.join(['pos'] + [pop for pop in pops.keys()]) + "\n")
+		for pos in fixed_diffs.keys():
+			of.write('\t'.join([str(pos)] + [fixed_diffs[pos][pop][0] for pop in pops.keys()]) + "\n")
+		of.close()
+	print("Wrote {count} fixed differences to {file}".format(count=diffs_found, file=args.output_table))
+else:
+	print("No fixed differences were found between the specified populations - no output file will be written.")
