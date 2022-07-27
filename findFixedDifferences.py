@@ -29,7 +29,7 @@ def DifferentiallyFixed(pops, seqDict):
 				for a in alleles:
 					if not a in popalleles[pop] and a in ['A','T','C','G','a','t','c','g']:
 						popalleles[pop].append(a)
-			elif[seqDict][sample][0] in ['N','n','-','.']:
+			elif [seqDict][sample][0] in ['N','n','-','.']:
 				missing[pop] += 1
 	# change missing count to fraction
 	for pop,i in missing.items():
