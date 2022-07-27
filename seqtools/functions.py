@@ -19,7 +19,24 @@ def IUPAC(alleles):
 	if hit == False:
 		code = "N"
 	return code
-    
+
+
+# opposite direction, going from a iupac code to a tuple of bases
+def IUPACReverse(allele):
+	IUPAC = {
+		'M': ['A','C'],
+		'R': ['A','G'],
+		'W': ['A','T'],
+		'S': ['C','G'],
+		'Y': ['C','T'],
+		'K': ['G','T']
+	}
+	hit = False
+	for code in IUPAC.keys():
+		if code == allele:
+			bases = tuple(IUPAC[code])
+	return bases
+
 #function to parse a fastafile to seqdict, requires pysam FastaFile to be loaded
 def FastaFetch(fastafile, sequences=None, start=None, end=None):
     f = pysam.FastaFile(fastafile)
