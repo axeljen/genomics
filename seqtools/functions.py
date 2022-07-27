@@ -19,7 +19,7 @@ def IUPAC(alleles):
 	if hit == False:
 		code = "N"
 	return code
-
+    
 #function to parse a fastafile to seqdict, requires pysam FastaFile to be loaded
 def FastaFetch(fastafile, sequences=None, start=None, end=None):
     f = pysam.FastaFile(fastafile)
