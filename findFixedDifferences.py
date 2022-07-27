@@ -17,12 +17,24 @@ def parsePopfile(popfile):
 def DifferentiallyFixed(pops, seqDict):
 	diff = False
 	popalleles = {}
+	# count missing
+	missing = {pop: 0 for pop in pops.keys()}
 	for pop,samples in pops.items():
 		popalleles[pop] = []
 		for sample in samples:
 			if not seqDict[sample][0] in popalleles[pop] and seqDict[sample][0] in ['A','T','C','G','a','t','c','g']:
 				popalleles[pop].append(seqDict[sample][0])
-	#check if the site is differentially fixed between at least two pops
+			elif seqDict[sample][0] in ['M','m','R','r','W','w','S','s','Y','y','K','k']:
+				alleles = seqtools.IUPACReverse(seqDict[sample][0])
+				for a in alleles:
+					if not a in popalleles[pop] and a in ['A','T','C','G','a','t','c','g']:
+						popalleles[pop].append(a)
+			elif[seqDict][sample][0] in ['N','n','-','.']:
+				missing[pop] += 1
+	# change missing count to fraction
+	for pop,i in missing.items():
+		missing[pop] = i / len(pops[pop])
+	# check if the site is differentially fixed between at least two pops
 	sitealleles = []
 	for pop,alleles in popalleles.items():
 		if len(alleles) == 1:
@@ -37,9 +49,9 @@ def DifferentiallyFixed(pops, seqDict):
 				continue
 			elif len(popalleles[pop]) > 1:
 				popalleles[pop] = list(set(popalleles[pop]))
-		return popalleles
+		return popalleles, missing
 	else:
-		return False
+		return False, False
 
 	
 import seqtools.functions as seqtools
@@ -54,6 +66,7 @@ parser.add_argument("-r", "--region", help="Region to analyze as chrom:start-end
 parser.add_argument("-o", "--output-table", help="Output table in tsv format.", required=True)
 
 parser.add_argument("-p", "--popfile", help="File with two tab separated columns, sample in the first and clade/population in second. It's ok to have samples without assignment.", required=True)
+parser.add_argument("--max-missing", help="Fraction of maximum of missing samples per population to allow for outputting a fixed difference.", default = 1)
 
 args = parser.parse_args()
 
@@ -71,6 +84,9 @@ diffs_found = 0
 # try to parse the input file format, if failing we will exit 
 input_read = False
 
+# max missing from args input
+maxmissing = args.max_missing
+
 # if a fasta input is given, take this path
 if re.match("^.*(.fa|.fa.gz|.fasta|.fasta.gz)$", args.input):
 	input_read = True
@@ -79,10 +95,12 @@ if re.match("^.*(.fa|.fa.gz|.fasta|.fasta.gz)$", args.input):
 	seqlen = len(seqDict[list(seqDict.keys())[0]])
 	for base in range(0,seqlen):
 		posDict = {sample: seqDict[sample][base] for sample in seqDict.keys()}
-		diff = DifferentiallyFixed(pops, posDict)
+		diff, missing = DifferentiallyFixed(pops, posDict)
 		if diff:
-			fixed_diffs[base + 1] = diff
-			diffs_found +=1
+			for m in missing.values():
+				if not m > maxmissing:
+					fixed_diffs[base + 1] = diff
+					diffs_found +=1
 
 # otherwise, chech that it's a vcf and continue this path instead
 if re.match("^.*(.vcf|.vcf.gz)$", args.input):
@@ -99,10 +117,12 @@ if re.match("^.*(.vcf|.vcf.gz)$", args.input):
 	for rec in vcf.fetch(chrom,start,end):
 		sample_alleles = get_bases(rec,samples)
 		posDict = Haploidize(sample_alleles, use_ambiguities=True)
-		diff = DifferentiallyFixed(pops,posDict)
+		diff, missing = DifferentiallyFixed(pops,posDict)
 		if diff:
-			fixed_diffs[rec.pos] = diff
-			diffs_found += 1
+			for m in missing.values():
+				if not m > maxmissing:
+					fixed_diffs[base + 1] = diff
+					diffs_found +=1
 
 # exit if input wasn't recognized
 if not input_read:

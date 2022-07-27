@@ -19,6 +19,24 @@ def IUPAC(alleles):
 		code = "N"
 	return code
 
+# opposite direction, going from a iupac code to a tuple of bases
+def IUPACReverse(allele):
+	IUPAC = {
+		'M': ['A','C'],
+		'R': ['A','G'],
+		'W': ['A','T'],
+		'S': ['C','G'],
+		'Y': ['C','T'],
+		'K': ['G','T']
+	}
+	hit = False
+	for code in IUPAC.keys():
+		if code == allele:
+			bases = tuple(IUPAC[code])
+	return bases
+	
+
+
 
 # this function will read a vcf record and return a tuple of each samples alleles
 def get_bases(rec, samples=None, set_filtered_to="N", ignore_filters=False):
