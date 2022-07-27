@@ -85,7 +85,7 @@ diffs_found = 0
 input_read = False
 
 # max missing from args input
-maxmissing = args.max_missing
+maxmissing = float(args.max_missing)
 
 # if a fasta input is given, take this path
 if re.match("^.*(.fa|.fa.gz|.fasta|.fasta.gz)$", args.input):
@@ -120,10 +120,13 @@ if re.match("^.*(.vcf|.vcf.gz)$", args.input):
 		posDict = Haploidize(sample_alleles, use_ambiguities=True)
 		diff, missing = DifferentiallyFixed(pops,posDict)
 		if diff:
+			maxmissing_filtered = False
 			for m in missing.values():
-				if not m > maxmissing:
-					fixed_diffs[base] = diff
-					diffs_found +=1
+				if m > maxmissing:
+					maxmissing_filtered = True
+			if not maxmissing_filtered:
+				fixed_diffs[base] = diff
+				diffs_found +=1
 
 # exit if input wasn't recognized
 if not input_read:
