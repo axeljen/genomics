@@ -29,7 +29,7 @@ def DifferentiallyFixed(pops, seqDict):
 				for a in alleles:
 					if not a in popalleles[pop] and a in ['A','T','C','G','a','t','c','g']:
 						popalleles[pop].append(a)
-			elif [seqDict][sample][0] in ['N','n','-','.']:
+			elif seqDict[sample][0] in ['N','n','-','.']:
 				missing[pop] += 1
 	# change missing count to fraction
 	for pop,i in missing.items():
@@ -115,13 +115,14 @@ if re.match("^.*(.vcf|.vcf.gz)$", args.input):
 	else:
 		chrom,start,end = None,None,None
 	for rec in vcf.fetch(chrom,start,end):
+		base = rec.pos
 		sample_alleles = get_bases(rec,samples)
 		posDict = Haploidize(sample_alleles, use_ambiguities=True)
 		diff, missing = DifferentiallyFixed(pops,posDict)
 		if diff:
 			for m in missing.values():
 				if not m > maxmissing:
-					fixed_diffs[base + 1] = diff
+					fixed_diffs[base] = diff
 					diffs_found +=1
 
 # exit if input wasn't recognized
