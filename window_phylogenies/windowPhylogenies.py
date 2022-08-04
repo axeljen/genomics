@@ -10,26 +10,13 @@ from multiprocessing import SimpleQueue
 from threading import Thread
 from time import sleep
 import tempfile
-from zipfile import ZipFile
+#from zipfile import ZipFile
 from pysam import VariantFile
 import random
 from vcf.functions import getChromLengths, vcfToSeqDict, generateWindows, filterSeqDict
 import seqtools.functions as seqtools
 from datetime import datetime
 import glob
-
-#function that reads a vcf file and outputs an alignment given specified coordinates
-def SplitVcfInWindows(input_vcf, samples, windows, haploidize, max_missing=None):
-    global windowsQueued
-    global resultsReceived
-    #next start generating windows
-    for w in windows:
-        seqDict = vcfToSeqDict(vcf, w['chrom'], haploidize = haploidize, handle_heterozygotes = handle_heterozygotes, samples=samples, start=w['start'], end=w['end'])
-        if max_missing:
-            seqDict = filterSeqDict(seqDict, maxmissing)
-        filteredLength = len(list(seqDict.values())[0])
-        windowsQueued +=1
-        windowQueue.put((w, seqDict))
 
 def IQTreeCommand(iqtree_path, model, bootstraps, alignment, outgroup, prefix, logfile, bootstrap_flag):
 	if outgroup:
@@ -102,74 +89,48 @@ def parsePHYMLOutput(prefix, windowCoords):
 			stats = "NA"
 	return tree,stats,lnL
 
-def run_window_phylogeny(windowQueue, software, model, bootstraps, opt, outgroup, directory, output_temp, logfile, bootstrap_flag, phyml_path=None, iqtree_path=None, test=False):
-	global resultsReceived
+def run_window_phylogeny(windowQueue, resultQueue, input_vcf, software, model, bootstraps, opt, outgroup, directory, output_temp, logfile, bootstrap_flag, phyml_path=None, iqtree_path=None, test=False):
 	global timePassed
 	global windowsTotal
+	global windowsQueued
 	while True:
 		if _FINISH:
 			break
-		windowCoords, seqDict = windowQueue.get()
+		windowsQueued,window,samples,haploidize,handle_heterozygotes = windowQueue.get()
+		vcf = VariantFile(input_vcf)
+		seqDict = vcfToSeqDict(vcf, window['chrom'], haploidize = haploidize, handle_heterozygotes = handle_heterozygotes, samples=samples, start=window['start'], end=window['end'])
 		seqLen = len(seqDict[list(seqDict.keys())[0]])
 		nseq = len(list(seqDict.keys()))
-		prefix = os.path.join(os.path.basename(directory) + "_" + str(windowCoords['start']) + "_" + str(windowCoords['end']))
+		prefix = os.path.join(os.path.basename(directory) + "_" + str(window['start']) + "_" + str(window['end']))
 		tempAlignment = tempfile.NamedTemporaryFile(mode="w", prefix=prefix, suffix=".phy", dir = directory, delete=False)
 		seqtools.WriteSeqDictToPhylip(seqDict, tempAlignment.name)
 		outprefix = os.path.join(directory, prefix)
 		tempAlignment.close()
 		if software == "phyml":
 			PHYMLCommand(phyml_path, model, opt, bootstraps, tempAlignment.name, directory, outprefix, logfile)
-			tree,stats,lnL = parsePHYMLOutput(outprefix, windowCoords)
-			treeDict = {'window_number':str(windowCoords['window_number']), 'chrom': str(windowCoords['chrom']), 'start':str(int(windowCoords['start']) + 1), 'stop':str(windowCoords['end']), 'lnL': str(lnL), 'samples': str(nseq), 'sites':str(seqLen), 'tree':tree}
+			tree,stats,lnL = parsePHYMLOutput(outprefix, window)
+			treeDict = {'window_number':str(window['window_number']), 'chrom': str(window['chrom']), 'start':str(int(window['start']) + 1), 'stop':str(window['end']), 'lnL': str(lnL), 'samples': str(nseq), 'sites':str(seqLen), 'tree':tree}
 		elif software == "iqtree":
 			IQTreeCommand(iqtree_path, model, bootstraps, tempAlignment.name, outgroup, outprefix, logfile, bootstrap_flag)
-			tree,nsites = parseIQTREEOutput(directory, outprefix, windowCoords)
-			treeDict = {'window_number':str(windowCoords['window_number']), 'chrom': str(windowCoords['chrom']), 'start':str(int(windowCoords['start']) + 1), 'stop':str(windowCoords['end']), 'sequences':str(nseq), 'sites':str(nsites), 'tree':tree}
+			tree,nsites = parseIQTREEOutput(directory, outprefix, window)
+			treeDict = {'window_number':str(window['window_number']), 'chrom': str(window['chrom']), 'start':str(int(window['start']) + 1), 'stop':str(window['end']), 'sequences':str(nseq), 'sites':str(nsites), 'tree':tree}
 		open(output_temp, "a").write(str('\t'.join(treeDict.values())) + "\n")
-		resultsReceived +=1
+		#global resultsReceived
 		# remove all files from this run
 		if not test:
 			filelist = glob.glob(os.path.join(directory, prefix) + "*")
 			for f in filelist:
 				os.remove(f)
-			
-		#print("Finished with " + str(resultsReceived) + "/" + str(windowsTotal) + " windows.")
 
-##watch result queue and send sorted results to writeQueue
-def sort_results(resultQueue, writeQueue):
-    global resultsReceived
-    global resultsHandled
-    global windowsQueued
-    results_dictlist = []
-    while True:
-        if _FINISH:
-            break
-        while windowsQueued > resultsReceived:
-            treeDict = resultQueue.get()
-            writeQueue.put(treeDict)
-            resultsReceived +=1
-
-#function to grab trees from writing queue and write to outputfile
-def write_results(writeQueue, output):
-    resultBuffer = []
-    while True:
-        if _FINISH:
-            break
-        resultOut = writeQueue.get()
-        #store results in dictionary and write in sorted order when all results are in
-        resultBuffer.append(resultOut)
-        output_temp.write(str('window_number') + "\t" + str(resultOut['start']) + "\t" + str(resultOut['stop']) + "\t" + str(resultOut['sequences']) + "\t" +
-        str(resultOut['sites']) + "\t" + str(resultOut['tree']) + "\n")
-        resultsWritten +=1
-        print("Retrieved result from window " + str(str(resultOut['window_number'])))
-        if not resultsWritten == 0 and resultsWritten == windowsQueued:
-            break
 ##indefinite loop to write some stats every tenth second as the program runs:
-def checkStats():
+def checkStats(output_temp):
 	global resultsReceived
+	#resultsReceived = len(results)
 	time_passed = 0
 	while True:
-		sleep(30)
+		sleep(5)
+		finished = open(output_temp).read().split("\n")
+		resultsReceived = len(finished)
 		time_passed = time_passed + 30
 		percentage = (resultsReceived / windowsTotal) * 100
 		sys.stderr.write("{time}: Received results for {received}/{total} windows ({perc} %)\n".format(time = datetime.now().strftime("%H:%M:%S"), received = resultsReceived, total = windowsTotal, perc=round(percentage, 2)))
@@ -354,7 +315,6 @@ global _FINISH
 _FINISH = False
 global windowsQueued
 windowsQueued = 0
-global resultsReceived
 resultsReceived = 0
 resultsWritten = 0
 resultsHandled = 0
@@ -372,13 +332,15 @@ writeQueue = SimpleQueue()
 #list to put all processes in:
 workerprocesses = []
 for thread in range(args.threads):
-	worker = Thread(target=run_window_phylogeny, args=(windowQueue, software, model, 
+	#vcfToSeqDict(vcf, window['chrom'], haploidize = haploidize, handle_heterozygotes = handle_heterozygotes, samples=samples, start=window['start'], end=window['end'])
+	worker =Process(target=run_window_phylogeny, args=(windowQueue, resultQueue, args.input, software, model, 
 	bootstraps, opt, outgroup, tmpdir, output_temp, logfile, bootstrap_flag, args.phyml_path, 
 	args.iqtree_path))
 	worker.daemon = True
 	worker.start()
 analysisStarted = True
-stats = Thread(target=checkStats)
+
+stats = Thread(target=checkStats, args=(output_temp,))
 stats.daemon = True
 stats.start()
 sys.stderr.write("\n" + "#" * 100 + "\n\n")
@@ -390,7 +352,12 @@ if headers_to_keep == "all":
 else:
 	samples = headers_to_keep
 
-SplitVcfInWindows(args.input, samples, regions, haploidize, max_missing=args.max_missing)
+# loop through the windows and feed to the queue
+for window in regions:
+	while windowsQueued - resultsReceived >= 50:
+		sleep(5)
+	windowQueue.put((windowsQueued,window,samples,haploidize,handle_heterozygotes))
+	windowsQueued += 1
 analysisStarted = True
 while resultsReceived < windowsQueued:
 	sleep(10)

@@ -150,10 +150,14 @@ with pysam.VariantFile(input_vcf) as vcf:
 			seqDictPos = len(seqDict['reference'])
 		applied_variants += 1
 		processed_positions = seqDictPos
-		
+#print(seqDict['PD_0032_Cercopithecus_ascanius_schmidti'])
+#print(seqDict['PD_0033_Cercopithecus_nictitans_nictitans'])
 # convert the sequences to strings
 for key,value in seqDict.items():
 	seqDict[key] = ''.join(value)
+
+for k,v in seqDict.items():
+	print(k + ": " + str(len(v)) + "\n")
 
 # write seqdict to output file
 sys.stderr.write("Writing output alignment to {}\n".format(outfile))
