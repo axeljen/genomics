@@ -159,10 +159,12 @@ def vcfToSeqDict(vcf, chrom, haploidize = True, handle_heterozygotes = "IUPAC", 
 	for rec in vcf.fetch(chrom,start,end):
 		siteDict = {s: [] for s in seqDict.keys()}
 		alleles = {0: rec.ref}
-		c = 1
-		for a in range(0,len(rec.alts)):
-			alleles[c] = rec.alts[a]
-			c +=1
+		# if  there are alt alleles, add these to the dictionary as well
+		if rec.alts:
+			i = 1
+			for a in range(0,len(rec.alts)):
+				alleles[i] = rec.alts[a]
+				i += 1
 		alleles['missing'] = "N"
 		# add dashes to the alleles to match up the longest allele, in case it's an indel or mixed
 		longest_allele = 0
