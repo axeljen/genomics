@@ -129,8 +129,11 @@ def checkStats(output_temp):
 	time_passed = 0
 	while True:
 		sleep(5)
-		finished = open(output_temp).read().split("\n")
-		resultsReceived = len(finished)
+		try:
+			finished = open(output_temp).read().split("\n")
+			resultsReceived = len(finished)
+		except:
+			resultsReceived = 0
 		time_passed = time_passed + 30
 		percentage = (resultsReceived / windowsTotal) * 100
 		sys.stderr.write("{time}: Received results for {received}/{total} windows ({perc} %)\n".format(time = datetime.now().strftime("%H:%M:%S"), received = resultsReceived, total = windowsTotal, perc=round(percentage, 2)))
