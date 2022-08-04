@@ -150,31 +150,33 @@ def vcfToSeqDict(vcf, chrom, haploidize = True, handle_heterozygotes = "IUPAC", 
 	if not samples:
 		samples = list(vcf.header.samples)
 	if haploidize:
-		seqDict = {s: [] for s in samples}
+		seqDict = {s: "" for s in samples}
 	else:
 		seqDict = {}
 		for s in samples:
-			seqDict[s + "__1"] = []
-			seqDict[s + "__2"] = []
+			seqDict[s + "__1"] = ""
+			seqDict[s + "__2"] = ""
 	for rec in vcf.fetch(chrom,start,end):
-		siteDict = {s: [] for s in seqDict.keys()}
+		siteDict = {s: "" for s in seqDict.keys()}
 		alleles = {0: rec.ref}
+		alleles['missing'] = "N"
 		# if  there are alt alleles, add these to the dictionary as well
 		if rec.alts:
 			i = 1
 			for a in range(0,len(rec.alts)):
 				alleles[i] = rec.alts[a]
 				i += 1
-		alleles['missing'] = "N"
+			longest_allele = 0
+			for a in alleles.values():
+				if len(a) > longest_allele:
+					longest_allele = len(a)
+		else:
+			longest_allele = len(alleles[0])
 		# add dashes to the alleles to match up the longest allele, in case it's an indel or mixed
-		longest_allele = 0
-		for a in alleles.values():
-			if len(a) > longest_allele:
-				longest_allele = len(a)
-		if longest_allele > 1:
+		if longest_allele > 1 and len(list(alleles.keys())) > 2:
 			print("Warning: found alleles longer then 1 bp (i.e. not only biallelic SNPs). This could lead to problems in the output alignment, as alleles of differing lengths may come out as non-aligned.")
-		for k,a in alleles.items():
-			allele = a + "-" * (longest_allele - 1 - len(a))
+			for k,a in alleles.items():
+				allele = a + "-" * (longest_allele - 1 - len(a))
 		for s in samples:
 			gt_int = rec.samples[s]['GT']
 			if None in gt_int:
@@ -189,16 +191,16 @@ def vcfToSeqDict(vcf, chrom, haploidize = True, handle_heterozygotes = "IUPAC", 
 						gt_hap = gt_dip[random.randint(0,1)]
 				else:
 					gt_hap = gt_dip[0]
-				siteDict[s].append(gt_hap)
+				siteDict[s] = gt_hap
 			else:
-				siteDict[s + "__1"] = [gt_dip[0]]
-				siteDict[s + "__2"] = [gt_dip[1]]
+				siteDict[s + "__1"] = gt_dip[0]
+				siteDict[s + "__2"] = gt_dip[1]
 		seqDict = {k: v + siteDict[k] for k,v in seqDict.items()}
 	# last we join the list together as strings, and do a sanity check confirming all sequences are of the same lengths
 	lengths = []
-	for k,v in seqDict.items():
-		seqDict[k] = ''.join(v)
-		lengths.append(len(v))
+	#for k,v in seqDict.items():
+	#	seqDict[k] = ''.join(v)
+	#	lengths.append(len(v))
 	if len(set(lengths)) > 1:
 		print("The sequences came out with differing lengths for some reason, which is not ok. Exiting.")
 		sys.exit()
