@@ -68,6 +68,9 @@ parser.add_argument("-o", "--output-table", help="Output table in tsv format.", 
 parser.add_argument("-p", "--popfile", help="File with two tab separated columns, sample in the first and clade/population in second. It's ok to have samples without assignment.", required=True)
 parser.add_argument("--max-missing", help="Fraction of maximum of missing samples per population to allow for outputting a fixed difference.", default = 1)
 
+parser.add_argument("--verbose-output", help="Added this option to give a more informative output field", action="store_true")
+parser.add_argument("--output-vcf", help="With this flag, we'll output the vcf record for sites identified as fixed, for simple parsing to VEP.", action="store_true")
+
 args = parser.parse_args()
 
 
@@ -102,7 +105,7 @@ if re.match("^.*(.fa|.fa.gz|.fasta|.fasta.gz)$", args.input):
 					fixed_diffs[base + 1] = diff
 					diffs_found +=1
 
-# otherwise, chech that it's a vcf and continue this path instead
+# otherwise, check that it's a vcf and continue this path instead
 if re.match("^.*(.vcf|.vcf.gz)$", args.input):
 	input_read = True
 	samples = []
@@ -115,7 +118,10 @@ if re.match("^.*(.vcf|.vcf.gz)$", args.input):
 	else:
 		chrom,start,end = None,None,None
 	for rec in vcf.fetch(chrom,start,end):
+		chrom = rec.chrom
 		base = rec.pos
+		ref = rec.ref
+		alts = ','.join(rec.alts)
 		sample_alleles = get_bases(rec,samples)
 		posDict = Haploidize(sample_alleles, use_ambiguities=True)
 		diff, missing = DifferentiallyFixed(pops,posDict)
@@ -125,7 +131,9 @@ if re.match("^.*(.vcf|.vcf.gz)$", args.input):
 				if m > maxmissing:
 					maxmissing_filtered = True
 			if not maxmissing_filtered:
-				fixed_diffs[base] = diff
+				diff['ref'] = ref
+				diff['alts'] = alts
+				fixed_diffs[(chrom, base)] = diff
 				diffs_found +=1
 
 # exit if input wasn't recognized
@@ -134,10 +142,22 @@ if not input_read:
 
 if diffs_found > 0:
 	with open(args.output_table, 'w') as of:
-		of.write('\t'.join(['pos'] + [pop for pop in pops.keys()]) + "\n")
-		for pos in fixed_diffs.keys():
-			of.write('\t'.join([str(pos)] + [fixed_diffs[pos][pop][0] for pop in pops.keys()]) + "\n")
-		of.close()
+		if not args.verbose_output:
+			of.write('\t'.join(['pos'] + [pop for pop in pops.keys()]) + "\n")
+			for pos in fixed_diffs.keys():
+				of.write('\t'.join([str(pos[1])] + [fixed_diffs[pos][pop][0] for pop in pops.keys()]) + "\n")
+			of.close()
+		else:
+			print("Writing verbose output file")
+			of.write('\t'.join(['chrom','pos','ref','alt'] + [pop for pop in pops.keys()]) + "\n")
+			for pos in fixed_diffs.keys():
+				of.write(str(pos[0]) + "\t" + str(pos[1]) + "\t" + str(fixed_diffs[pos]['ref']) + "\t" + str(fixed_diffs[pos]['alts']) + "\t" + '\t'.join([fixed_diffs[pos][pop][0] for pop in pops.keys()]) + "\n")
+			of.close()
+	if args.output_vcf:
+		print("Writing vcf output...")
+		with open(re.sub(".tsv",".vcf",args.output_table), "w") as of:
+			for pos in fixed_diffs.keys():
+				of.write(str(pos[0]) + "\t" + str(pos[1]) + "\t" + "." + "\t" + fixed_diffs[pos]['ref'] + "\t" + fixed_diffs[pos]['alts'] + "\n")
 	print("Wrote {count} fixed differences to {file}".format(count=diffs_found, file=args.output_table))
 else:
 	print("No fixed differences were found between the specified populations - no output file will be written.")
