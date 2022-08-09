@@ -141,7 +141,7 @@ if not input_read:
 	print("Could not recognize format of input file, must be a fasta (.fa,.fasta,.fa.gz,.fasta.gz) or a vcf (.vcf,.vcf.gz).")	
 
 if diffs_found > 0:
-	with open(args.output_name + ".tsv", 'w') as of:
+	with open(args.output_prefix + ".tsv", 'w') as of:
 		if not args.verbose_output:
 			of.write('\t'.join(['pos'] + [pop for pop in pops.keys()]) + "\n")
 			for pos in fixed_diffs.keys():
@@ -155,7 +155,7 @@ if diffs_found > 0:
 			of.close()
 	if args.output_vcf:
 		print("Writing vcf output...")
-		with open(args.output_name + ".vcf", 'w') as of:
+		with open(args.output_prefix + ".vcf", 'w') as of:
 			for pos in fixed_diffs.keys():
 				of.write(str(pos[0]) + "\t" + str(pos[1]) + "\t" + "." + "\t" + fixed_diffs[pos]['ref'] + "\t" + fixed_diffs[pos]['alts'] + "\n")
 	print("Wrote {count} fixed differences to {file}".format(count=diffs_found, file=args.output_prefix + ".tsv"))
