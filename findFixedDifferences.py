@@ -63,7 +63,7 @@ parser = argparse.ArgumentParser()
 #arguments for in and output:
 parser.add_argument("-i", "--input", help="Input file, either as alignment in fasta format or as a vcf file.", required=True)
 parser.add_argument("-r", "--region", help="Region to analyze as chrom:start-end, compatible only with vcf input.")
-parser.add_argument("-o", "--output-table", help="Output table in tsv format.", required=True)
+parser.add_argument("-o", "--output-prefix", help="Prefix to output file(s).", required=True)
 
 parser.add_argument("-p", "--popfile", help="File with two tab separated columns, sample in the first and clade/population in second. It's ok to have samples without assignment.", required=True)
 parser.add_argument("--max-missing", help="Fraction of maximum of missing samples per population to allow for outputting a fixed difference.", default = 1)
@@ -141,7 +141,7 @@ if not input_read:
 	print("Could not recognize format of input file, must be a fasta (.fa,.fasta,.fa.gz,.fasta.gz) or a vcf (.vcf,.vcf.gz).")	
 
 if diffs_found > 0:
-	with open(args.output_table, 'w') as of:
+	with open(args.output_name + ".tsv", 'w') as of:
 		if not args.verbose_output:
 			of.write('\t'.join(['pos'] + [pop for pop in pops.keys()]) + "\n")
 			for pos in fixed_diffs.keys():
@@ -155,9 +155,9 @@ if diffs_found > 0:
 			of.close()
 	if args.output_vcf:
 		print("Writing vcf output...")
-		with open(re.sub(".tsv",".vcf",args.output_table), "w") as of:
+		with open(args.output_name + ".vcf", 'w') as of:
 			for pos in fixed_diffs.keys():
 				of.write(str(pos[0]) + "\t" + str(pos[1]) + "\t" + "." + "\t" + fixed_diffs[pos]['ref'] + "\t" + fixed_diffs[pos]['alts'] + "\n")
-	print("Wrote {count} fixed differences to {file}".format(count=diffs_found, file=args.output_table))
+	print("Wrote {count} fixed differences to {file}".format(count=diffs_found, file=args.output_prefix + ".tsv"))
 else:
 	print("No fixed differences were found between the specified populations - no output file will be written.")
