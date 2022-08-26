@@ -164,8 +164,12 @@ def vcfToSeqDict(vcf, chrom, haploidize = True, handle_heterozygotes = "IUPAC", 
 		if rec.alts:
 			i = 1
 			for a in range(0,len(rec.alts)):
-				alleles[i] = rec.alts[a]
-				i += 1
+				# a bug in older versions of GATK sometimes lets "<NON_REF>" alts to be carried over from hapcaller gvcfs, if we encounter this, set it to "N"
+				if a == "<NON_REF>":
+					alleles[i] = "N"
+				else:
+					alleles[i] = rec.alts[a]
+					i += 1
 			longest_allele = 0
 			for a in alleles.values():
 				if len(a) > longest_allele:
