@@ -56,12 +56,20 @@ parser.add_argument('--taxa', help="Taxa to keep in output tree, prune out all o
 parser.add_argument('--outgroup', help="Outgroup taxon or taxa to root output tree by.")
 parser.add_argument('-o', '--outfile', help="File to write output to.", required=True)
 
+# 
+parser.add_argument('--only-topology', action="store_true", help="Use this to remove branchlengths and support values from the output tree.")
+parser.add_argument('--rename-samples', type=str, help="File with two columns, old_name'\t'new_name, given to rename the tip labels of the tree")
+
 #some arguments that can be used on a treelist input
 parser.add_argument('--randsample', type=int, help="If specified, N number of trees will be randomly sampled from input treelist.")
 
 args = parser.parse_args()
 # parse command line inputs
 trees,count = parse_treefile(args.input_tree)
+
+outformat=0
+if args.only_topology:
+	outformat=9
 
 if args.taxa:
 	taxa = parse_taxafile(args.taxa)
@@ -111,7 +119,7 @@ for tree in trees:
 		t = prune_tree(t,taxa)
 	if root:
 		t = root_tree(t,outgroup)
-	processed_trees.append(t.write())
+	processed_trees.append(t.write(format=outformat))
 
 # and last write them all to output
 sys.stderr.write('\nWriting tree(s) to file {}.\n'.format(args.outfile))
