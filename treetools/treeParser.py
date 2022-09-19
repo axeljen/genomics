@@ -80,10 +80,11 @@ if args.outgroup:
 	root = True
 	sys.stderr.write('\nRooting all trees on outgroup: \n {}.\n'.format(','.join(outgroup)))
 	# check that, if a set of taxa is given, outgroup is included there
-	for o in outgroup:
-		if not o in taxa:
-			print("\nGiven outgroup must be included in taxa to keep after pruning. Exiting.\n")
-			sys.exit()
+	if args.taxa:
+		for o in outgroup:
+			if not o in taxa:
+				print("\nGiven outgroup must be included in taxa to keep after pruning. Exiting.\n")
+				sys.exit()
 if args.randsample:
 	if count == 1:
 		print("\nRandsample can only be used with treelist input, exiting.\n")
