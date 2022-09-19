@@ -112,3 +112,27 @@ def WriteSeqDictToPhylip(seqDict, outfile, strict=False, append=False):
                     header = key[0:10]
             f.write(header + "   " + value + "\n")
         f.close()
+
+# very simple function to read phylip files, will only work on interleaved format right now!
+def ReadPhylip(phylipfile):
+    seqDict = {}
+    with open(phylipfile) as f:
+        header = True
+        nseq = 0
+        seqlen = 0
+        for line in f.readlines():
+            if header:
+                nseq = line.split()[0]
+                seqlen = line.split()[1]
+                header = False
+            else:
+                seqDict[line.split()[0]] = line.split()[1]
+    return seqDict
+
+def parseSampleFile(samplefile):
+    samples = []
+    with open(samplefile) as f:
+        for line in f.readlines():
+            if not line.rstrip() == "":
+                samples.append(line.rstrip())
+    return samples

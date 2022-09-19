@@ -7,7 +7,7 @@ import vcf.functions as v
 import os
 
 
-parser = argparse.ArgumentParser(description="This tool will read a VCF file and convert it to a multi sequence alignment.")
+parser = argparse.ArgumentParser(description="This tool will convert the records in a VCF file to a multi sequence alignment.")
 
 # input and output
 parser.add_argument('-i', '--input', type=str, help='Input vcf', required=True)
