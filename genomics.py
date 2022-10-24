@@ -1,5 +1,5 @@
 # Axel Jensen, 2022-10-21
-import bgzip
+#import bgzip
 import random
 import pysam
 # Some generally useful tools/classes for working with genomics data
