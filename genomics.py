@@ -57,19 +57,21 @@ class MultiSequence:
 		self.output_file = None
 		self.missing_intervals = None
 		self.called_sites = None
+		self.samples = []
 	def vcfToMSA(self,vcf,chrom,start,end,samples,index=1,haploidize=True,heterozygotes="IUPAC",reference_genome=None,mask_missing_sites=True):
 		if index == 1:
 			start = start - 1
 		records = vcf.fetch(chrom,start,end)
 		# initiate a MultiSequence object including one sequence for each sample, or two if we're not haploidizing
-		for sample in samples:
-			if haploidize:
-				self.sequences = [Sequence(sample,"",{'region':(chrom,start,end),'vcf_sample':sample}) for sample in samples]
-				#msa = MultiSequence(sequences)
-			else:
-				haps1 = Sequence(sample + "__1","",{'region':(chrom,start,end),'haplotype':1,'vcf_sample':sample})
-				haps2 = Sequence(sample + "__2","",{'region':(chrom,start,end),'haplotype':2,'vcf_sample':sample})
-				self.sequences = haps1 + haps2
+		if haploidize:
+			self.samples = [sample for sample in samples]
+			self.sequences = [Sequence(sample,"",{'region':(chrom,start,end),'vcf_sample':sample}) for sample in samples]
+			#msa = MultiSequence(sequences)
+		else:
+			haps1 = [Sequence(sample + "__1","",{'region':(chrom,start,end),'haplotype':1,'vcf_sample':sample}) for sample in samples]
+			haps2 = [Sequence(sample + "__2","",{'region':(chrom,start,end),'haplotype':2,'vcf_sample':sample}) for sample in samples]
+			self.sequences = haps1 + haps2
+			self.samples = [sample + "__1" for sample in samples] + [sample + "__2" for sample in samples]
 				#msa = MultiSequence(sequences)
 		# keep track of the sites with called genotypes, for later projection onto the reference genome if wanted
 		missing_intervals = []
@@ -83,11 +85,12 @@ class MultiSequence:
 			else:
 				called_sites.append(rec.pos)
 				last_pos = rec.pos
-			alleles_dict = dict([(i,a) for i,a in enumerate(rec.alleles)]) # this gives a "translation" dict with integers as keys and alleles as values
+			alleles_dict = dict([(i,a) for i,a in enumerate(rec.alleles) if not a == ""]) # this gives a "translation" dict with integers as keys and alleles as values
 			alleles_dict[None] = "N" # adds translation for missing genotypes too
 			# if any alleles differ in length from each other (not recommended for now!), we make them the same length by adding dashes, and print a warning about this
 			if not len(set([len(i) for i in alleles_dict.values()])) == 1:
 				print("Warning: indel-type alleles of differing lengths found at position {}. This could lead to erroneous alignments.".format(rec.pos))
+				print(alleles_dict)
 				longest_allele = 0
 				for a in alleles_dict.values():
 					if len(a) > longest_allele:
@@ -145,22 +148,24 @@ class MultiSequence:
 						relend += 1
 						seqpos += 1
 					intervals_con.append((relstart,relend,'called'))
-		# now it should be straightforward to go through each sample, fetch the appropriate refsequence, and concatenate the called bases accordingly
-		for seq in self.sequences:
-			new_sequence = ""
-			for i in intervals_con:
-				if i[2] == 'missing':
-					s = refseq[i[0]:i[1]]
-					if mask_missing_sites:
-						s = "N" * len(s)
-				else:
-					s = seq.sequence[i[0]:i[1]]
-				new_sequence = new_sequence + s 
-			seq.sequence = new_sequence
+			# now it should be straightforward to go through each sample, fetch the appropriate refsequence, and concatenate the called bases accordingly
+			for seq in self.sequences:
+				new_sequence = ""
+				for i in intervals_con:
+					if i[2] == 'missing':
+						s = refseq[i[0]:i[1]]
+						if mask_missing_sites:
+							s = "N" * len(s)
+					else:
+						s = seq.sequence[i[0]:i[1]]
+					new_sequence = new_sequence + s 
+				seq.sequence = new_sequence
 		#refseq = pysam.FastaFetch()
 		self.missing_intervals = missing_intervals
 		self.called_sites = called_sites
 		#sprint(missing_intervals, called_sites)
+	def getSequenceByName(self,name):
+		return [seq for seq in self.sequences if seq.sample == name][0]
 	def length(self):
 		# fetch all sequence lenghts
 		lengths = [len(l.sequence) for l in self.sequences]
